@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(New-Item -ItemType Directory -Force -Path src/domain/models, src/domain/strain, src/domain/sleep, src/domain/recovery, src/domain/physiology, src/ingestion/polar_accesslink, src/ingestion/polar_ble, src/ingestion/adapters, src/ingestion/normalization, src/services/analytics, src/services/scoring, src/services/trends, src/services/readiness, src/storage/repositories, src/storage/duckdb, src/storage/parquet, src/mcp/tools, src/mcp/schemas, src/mcp/resources, src/ui/streamlit/pages, src/ui/streamlit/components, src/ui/streamlit/charts, src/utils, tests/domain, tests/ingestion, tests/services, tests/storage, configs, scripts, data/raw, data/processed, data/parquet, data/tokens)",
+      "Bash(Out-Null)",
+      "Bash(Write-Output \"Directories created\")",
+      "PowerShell(uv sync *)",
+      "PowerShell(uv run *)",
+      "Bash(uv run *)",
+      "Bash(/c/Users/cleme/PROJECTS/POLAR_DASHBOARD/.venv/Scripts/python.exe *)",
+      "Bash(.venv/Scripts/python.exe *)",
+      "Bash(PYTHONPATH=src .venv/Scripts/python.exe *)"
+    ]
+  }
+}

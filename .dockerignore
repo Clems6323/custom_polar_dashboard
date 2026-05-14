@@ -1,0 +1,38 @@
+# Python environment and caches
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+
+# Test and dev artefacts
+tests/
+.coverage
+coverage.xml
+htmlcov/
+
+# Documentation source (already copied via COPY docs/)
+# Exclude only large generated artefacts if any
+
+# Version control
+.git/
+.gitignore
+
+# Local environment and secrets
+.env
+data/
+
+# IDE / OS
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.log

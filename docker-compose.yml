@@ -1,0 +1,28 @@
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: polar-dashboard:latest
+    container_name: polar-dashboard
+    restart: unless-stopped
+
+    ports:
+      - "8501:8501"
+
+    env_file:
+      - .env
+
+    volumes:
+      # Persist the database, tokens, and parquet files across restarts.
+      # Run `docker compose up` from the project root so Docker resolves
+      # ./data relative to this file.
+      - ./data:/app/data
+
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
