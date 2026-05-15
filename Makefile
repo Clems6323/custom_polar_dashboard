@@ -3,6 +3,7 @@
 .PHONY: help install dev dashboard mcp init-db sync demo auth \
         lint format type-check test test-cov check \
         docker-build docker-up docker-down docker-logs docker-shell \
+        n8n-up n8n-down n8n-logs \
         clean
 
 # ─── Help ────────────────────────────────────────────────────────────────────
@@ -28,10 +29,15 @@ help:
 	@echo ""
 	@echo "  Docker"
 	@echo "    docker-build  Build the production Docker image"
-	@echo "    docker-up     Start the dashboard via docker compose"
-	@echo "    docker-down   Stop the dashboard container"
-	@echo "    docker-logs   Tail container logs"
-	@echo "    docker-shell  Open a shell inside the running container"
+	@echo "    docker-up     Start all services (dashboard + n8n) via docker compose"
+	@echo "    docker-down   Stop all containers"
+	@echo "    docker-logs   Tail dashboard container logs"
+	@echo "    docker-shell  Open a shell inside the running dashboard container"
+	@echo ""
+	@echo "  n8n (Telegram bridge)"
+	@echo "    n8n-up        Start only the n8n container"
+	@echo "    n8n-down      Stop only the n8n container"
+	@echo "    n8n-logs      Tail n8n container logs"
 	@echo ""
 	@echo "  Housekeeping"
 	@echo "    clean         Remove caches, coverage artefacts, and .pyc files"
@@ -96,6 +102,17 @@ docker-logs:
 
 docker-shell:
 	docker compose exec dashboard /bin/bash
+
+# ─── n8n ─────────────────────────────────────────────────────────────────────
+n8n-up:
+	docker compose up -d n8n
+	@echo "n8n → http://localhost:5678"
+
+n8n-down:
+	docker compose stop n8n
+
+n8n-logs:
+	docker compose logs -f n8n
 
 # ─── Housekeeping ────────────────────────────────────────────────────────────
 clean:

@@ -1,4 +1,6 @@
 services:
+
+  # ─── Polar analytics dashboard ───────────────────────────────────────────────
   dashboard:
     build:
       context: .
@@ -26,3 +28,54 @@ services:
       timeout: 10s
       start_period: 30s
       retries: 3
+
+    networks:
+      - polar-net
+
+  # ─── n8n workflow automation (Telegram bridge) ───────────────────────────────
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: polar-n8n
+    restart: unless-stopped
+
+    ports:
+      - "5678:5678"
+
+    environment:
+      # Data persistence
+      - N8N_USER_FOLDER=/home/node/.n8n
+      # Base URL used in webhook URLs shown in the editor
+      - N8N_EDITOR_BASE_URL=http://localhost:5678
+      # Disable telemetry
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_VERSION_NOTIFICATIONS_ENABLED=false
+      # Timezone — adjust to your local timezone
+      - GENERIC_TIMEZONE=Europe/Paris
+      # Basic-auth for the n8n web UI (change these before exposing publicly)
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-changeme}
+
+    volumes:
+      # Workflow definitions, credentials, and execution history
+      - n8n_data:/home/node/.n8n
+      # Read-only access to the Polar database so n8n workflows can query it
+      - ./data:/app/data:ro
+
+    networks:
+      - polar-net
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+
+volumes:
+  n8n_data:
+    driver: local
+
+networks:
+  polar-net:
+    driver: bridge
