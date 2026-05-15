@@ -44,14 +44,18 @@ services:
     environment:
       # Data persistence
       - N8N_USER_FOLDER=/home/node/.n8n
-      # Base URL used in webhook URLs shown in the editor
+      # URL used by the browser to open the editor
       - N8N_EDITOR_BASE_URL=http://localhost:5678
+      # Public HTTPS URL that Telegram (and other services) POST webhooks to.
+      # Must match the Cloudflare Tunnel hostname configured in the dashboard.
+      # Example: https://your-tunnel.example.com
+      - WEBHOOK_URL=${N8N_WEBHOOK_URL}
       # Disable telemetry
       - N8N_DIAGNOSTICS_ENABLED=false
       - N8N_VERSION_NOTIFICATIONS_ENABLED=false
       # Timezone — adjust to your local timezone
       - GENERIC_TIMEZONE=Europe/Paris
-      # Basic-auth for the n8n web UI (change these before exposing publicly)
+      # Basic-auth for the n8n web UI (change before exposing publicly)
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
       - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-changeme}
@@ -71,6 +75,22 @@ services:
       timeout: 10s
       start_period: 40s
       retries: 3
+
+  # ─── Cloudflare Tunnel (HTTPS ingress for Telegram webhooks) ─────────────────
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: polar-cloudflared
+    restart: unless-stopped
+    # No ports exposed — cloudflared opens outbound connections only.
+    # Traffic is routed inward by Cloudflare's edge to the n8n service.
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+
+    depends_on:
+      n8n:
+        condition: service_healthy
+
+    networks:
+      - polar-net
 
 volumes:
   n8n_data:
