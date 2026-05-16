@@ -2,7 +2,7 @@
 .DEFAULT_GOAL := help
 .PHONY: help install dev dashboard mcp init-db sync demo auth \
         lint format type-check test test-cov check \
-        docker-build docker-up docker-down docker-logs docker-shell \
+        up docker-build docker-up docker-down docker-logs docker-shell \
         n8n-up n8n-down n8n-logs \
         clean
 
@@ -28,6 +28,7 @@ help:
 	@echo "    check         lint + type-check + test-cov"
 	@echo ""
 	@echo "  Docker"
+	@echo "    up            Start all services, auto-patch .env with tunnel URL, restart n8n"
 	@echo "    docker-build  Build the production Docker image"
 	@echo "    docker-up     Start all services (dashboard + n8n) via docker compose"
 	@echo "    docker-down   Stop all containers"
@@ -87,6 +88,9 @@ test-cov:
 check: lint type-check test-cov
 
 # ─── Docker ──────────────────────────────────────────────────────────────────
+up:
+	bash scripts/tunnel_up.sh
+
 docker-build:
 	docker build --target runtime -t polar-dashboard:latest .
 
