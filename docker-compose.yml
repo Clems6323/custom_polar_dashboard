@@ -89,10 +89,6 @@ services:
     # Forwards inbound Cloudflare traffic to n8n via the Docker internal network.
     command: tunnel --no-autoupdate --url http://n8n:5678
 
-    depends_on:
-      n8n:
-        condition: service_healthy
-
     networks:
       - polar-net
 
