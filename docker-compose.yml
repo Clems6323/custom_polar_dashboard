@@ -76,14 +76,18 @@ services:
       start_period: 40s
       retries: 3
 
-  # ─── Cloudflare Tunnel (HTTPS ingress for Telegram webhooks) ─────────────────
+  # ─── Cloudflare Quick Tunnel (HTTPS ingress for Telegram webhooks) ──────────
+  # Assigns a random *.trycloudflare.com URL on every startup — no account or
+  # token needed.  Read the assigned URL from logs after starting:
+  #   docker compose logs cloudflared | grep "trycloudflare.com"
+  # Then set N8N_WEBHOOK_URL in .env to that URL and restart n8n:
+  #   docker compose restart n8n
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: polar-cloudflared
     restart: unless-stopped
-    # No ports exposed — cloudflared opens outbound connections only.
-    # Traffic is routed inward by Cloudflare's edge to the n8n service.
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    # Forwards inbound Cloudflare traffic to n8n via the Docker internal network.
+    command: tunnel --no-autoupdate --url http://n8n:5678
 
     depends_on:
       n8n:
