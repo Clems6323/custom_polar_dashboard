@@ -16,11 +16,16 @@ import re
 import subprocess
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 ENV_FILE = ROOT / ".env"
 COMPOSE = ["docker", "compose", "-f", str(ROOT / "docker-compose.yml")]
+
+# Cloudflared log timestamp format: 2026-05-16T18:22:24Z
+_LOG_TS_RE = re.compile(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)")
+_TUNNEL_URL_RE = re.compile(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com")
 
 
 def compose(*args: str) -> None:
@@ -36,9 +41,21 @@ def cloudflared_logs() -> str:
     return result.stdout + result.stderr
 
 
-def find_tunnel_url(text: str) -> str | None:
-    m = re.search(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com", text)
-    return m.group(0) if m else None
+def find_tunnel_url(text: str, after: datetime) -> str | None:
+    """Return the first trycloudflare.com URL from log lines timestamped after `after`."""
+    for line in text.splitlines():
+        m_ts = _LOG_TS_RE.match(line)
+        if m_ts:
+            try:
+                ts = datetime.fromisoformat(m_ts.group(1).replace("Z", "+00:00"))
+            except ValueError:
+                continue
+            if ts < after:
+                continue
+        m_url = _TUNNEL_URL_RE.search(line)
+        if m_url:
+            return m_url.group(0)
+    return None
 
 
 def patch_env(url: str) -> None:
@@ -51,13 +68,15 @@ def patch_env(url: str) -> None:
 
 
 def main() -> None:
+    start_time = datetime.now(timezone.utc)
+
     print("Starting all services...")
     compose("up", "-d")
 
     print("Waiting for Cloudflare quick tunnel URL (up to 2 minutes)...")
     tunnel_url: str | None = None
     for _ in range(40):
-        tunnel_url = find_tunnel_url(cloudflared_logs())
+        tunnel_url = find_tunnel_url(cloudflared_logs(), after=start_time)
         if tunnel_url:
             break
         time.sleep(3)
