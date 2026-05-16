@@ -89,7 +89,7 @@ check: lint type-check test-cov
 
 # ─── Docker ──────────────────────────────────────────────────────────────────
 up:
-	bash scripts/tunnel_up.sh
+	uv run python scripts/tunnel_up.py
 
 docker-build:
 	docker build --target runtime -t polar-dashboard:latest .
