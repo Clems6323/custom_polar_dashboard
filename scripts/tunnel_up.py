@@ -59,8 +59,8 @@ def patch_env(url: str) -> None:
 
 
 def main() -> None:
-    print("Starting dashboard and n8n...")
-    compose("up", "-d", "dashboard", "n8n")
+    print("Starting dashboard, n8n, and polar-mcp...")
+    compose("up", "-d", "dashboard", "n8n", "polar-mcp")
 
     print("Waiting for n8n to be healthy...")
     for _ in range(40):
@@ -109,6 +109,7 @@ def main() -> None:
     print("Stack is up:")
     print("  Dashboard -> http://localhost:8501")
     print("  n8n       -> http://localhost:5678")
+    print("  polar-mcp -> http://polar-mcp:8000/mcp/ (Docker internal)")
     print(f"  Webhook   -> {tunnel_url}")
 
 

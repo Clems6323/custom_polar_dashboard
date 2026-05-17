@@ -91,20 +91,18 @@ services:
       - MCP_TRANSPORT=streamable-http
       - MCP_HOST=0.0.0.0
       - MCP_PORT=8000
-      # Point to the shared database (read-only mount below)
+      - MCP_STATELESS_HTTP=true
       - POLAR_DB_PATH=/app/data/polar_dashboard.duckdb
 
     volumes:
-      - ./data:/app/data:ro
+      - ./data:/app/data
 
-    # Port 8000 is only exposed on the internal Docker network.
-    # n8n reaches it at http://polar-mcp:8000 — no host binding needed.
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
 
     healthcheck:
       test: ["CMD", "python", "-c",
-             "import urllib.request; urllib.request.urlopen('http://localhost:8000/mcp/')"]
+             "import socket; s=socket.socket(); s.settimeout(5); s.connect(('localhost', 8000)); s.close()"]
       interval: 30s
       timeout: 10s
       start_period: 20s
