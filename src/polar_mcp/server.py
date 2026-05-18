@@ -28,20 +28,22 @@ from polar_mcp.tools.recovery import query_recovery_score
 from polar_mcp.tools.sleep import query_sleep_score, query_sleep_trends
 from polar_mcp.tools.strain import query_strain_score, query_training_load
 from storage.duckdb.connection import DuckDBConnectionManager
-from storage.duckdb.migrations import run_migrations
 
 _DEFAULT_DB_PATH = "data/polar.duckdb"
+
+# Singleton — opened once at first session, reused across all subsequent sessions.
+# FastMCP streamable-http calls the lifespan on every new client session, so without
+# this guard each healthcheck poll would open a new DuckDB connection.
+_manager: DuckDBConnectionManager | None = None
 
 
 @asynccontextmanager
 async def _lifespan(app: FastMCP) -> AsyncGenerator[dict, None]:  # type: ignore[type-arg]
-    db_path = os.environ.get("POLAR_DB_PATH", _DEFAULT_DB_PATH)
-    manager = DuckDBConnectionManager(db_path)
-    run_migrations(manager.conn)
-    try:
-        yield {"conn": manager.conn}
-    finally:
-        manager.close()
+    global _manager
+    if _manager is None:
+        db_path = os.environ.get("POLAR_DB_PATH", _DEFAULT_DB_PATH)
+        _manager = DuckDBConnectionManager(db_path, read_only=True)
+    yield {"conn": _manager.conn}
 
 
 mcp = FastMCP(
@@ -51,6 +53,9 @@ mcp = FastMCP(
         "All tools return structured JSON with a 'metadata' field indicating data "
         "availability and confidence. Dates are ISO 8601 strings (YYYY-MM-DD)."
     ),
+    host=os.environ.get("MCP_HOST", "127.0.0.1"),
+    port=int(os.environ.get("MCP_PORT", "8000")),
+    stateless_http=os.environ.get("MCP_STATELESS_HTTP", "false").lower() == "true",
     lifespan=_lifespan,
 )
 
@@ -198,4 +203,5 @@ def get_hrv_baseline(
 
 
 if __name__ == "__main__":
-    mcp.run()
+    transport = os.environ.get("MCP_TRANSPORT", "stdio")
+    mcp.run(transport=transport)

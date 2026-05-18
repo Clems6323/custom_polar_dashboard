@@ -27,16 +27,17 @@ class DuckDBConnectionManager:
             manager.conn.execute("SELECT 1")
     """
 
-    def __init__(self, db_path: str | Path = ":memory:") -> None:
+    def __init__(self, db_path: str | Path = ":memory:", read_only: bool = False) -> None:
         self._path = str(db_path)
+        self._read_only = read_only
         self._conn: duckdb.DuckDBPyConnection | None = None
 
     @property
     def conn(self) -> duckdb.DuckDBPyConnection:
         """Return the live connection, opening it on first access."""
         if self._conn is None:
-            logger.info("Opening DuckDB: %s", self._path)
-            self._conn = duckdb.connect(self._path)
+            logger.info("Opening DuckDB (%s): %s", "ro" if self._read_only else "rw", self._path)
+            self._conn = duckdb.connect(self._path, read_only=self._read_only)
         return self._conn
 
     def close(self) -> None:

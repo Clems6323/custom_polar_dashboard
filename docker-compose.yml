@@ -1,4 +1,6 @@
 services:
+
+  # ─── Polar analytics dashboard ───────────────────────────────────────────────
   dashboard:
     build:
       context: .
@@ -26,3 +28,109 @@ services:
       timeout: 10s
       start_period: 30s
       retries: 3
+
+    networks:
+      - polar-net
+
+  # ─── n8n workflow automation (Telegram bridge) ───────────────────────────────
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: polar-n8n
+    restart: unless-stopped
+
+    ports:
+      - "5678:5678"
+
+    environment:
+      # Data persistence
+      - N8N_USER_FOLDER=/home/node/.n8n
+      # URL used by the browser to open the editor
+      - N8N_EDITOR_BASE_URL=http://localhost:5678
+      # Public HTTPS URL that Telegram (and other services) POST webhooks to.
+      # Must match the Cloudflare Tunnel hostname configured in the dashboard.
+      # Example: https://your-tunnel.example.com
+      - WEBHOOK_URL=${N8N_WEBHOOK_URL}
+      # Disable telemetry
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_VERSION_NOTIFICATIONS_ENABLED=false
+      # Timezone — adjust to your local timezone
+      - GENERIC_TIMEZONE=Europe/Paris
+      # Basic-auth for the n8n web UI (change before exposing publicly)
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-changeme}
+
+    volumes:
+      # Workflow definitions, credentials, and execution history
+      - n8n_data:/home/node/.n8n
+      # Read-only access to the Polar database so n8n workflows can query it
+      - ./data:/app/data:ro
+
+    networks:
+      - polar-net
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+
+  # ─── Polar MCP server (analytics API for n8n workflows) ─────────────────────
+  polar-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: polar-dashboard:latest
+    container_name: polar-mcp
+    restart: unless-stopped
+    command: ["python", "-m", "polar_mcp.server"]
+
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8000
+      - MCP_STATELESS_HTTP=true
+      - POLAR_DB_PATH=/app/data/polar_dashboard.duckdb
+
+    volumes:
+      - ./data:/app/data
+
+    ports:
+      - "8000:8000"
+
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import socket; s=socket.socket(); s.settimeout(5); s.connect(('localhost', 8000)); s.close()"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+
+    networks:
+      - polar-net
+
+  # ─── Cloudflare Quick Tunnel (HTTPS ingress for Telegram webhooks) ──────────
+  # Assigns a random *.trycloudflare.com URL on every startup — no account or
+  # token needed.  Read the assigned URL from logs after starting:
+  #   docker compose logs cloudflared | grep "trycloudflare.com"
+  # Then set N8N_WEBHOOK_URL in .env to that URL and restart n8n:
+  #   docker compose restart n8n
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: polar-cloudflared
+    restart: unless-stopped
+    # Forwards inbound Cloudflare traffic to n8n via the Docker internal network.
+    command: tunnel --no-autoupdate --url http://n8n:5678
+
+    networks:
+      - polar-net
+
+volumes:
+  n8n_data:
+    driver: local
+
+networks:
+  polar-net:
+    driver: bridge
