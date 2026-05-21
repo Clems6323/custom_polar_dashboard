@@ -289,13 +289,20 @@ class TestSyncAndAnalyzeOutput:
 # ---------------------------------------------------------------------------
 
 
+def _make_ctx() -> MagicMock:
+    """Build a minimal FastMCP Context mock with a fake DuckDB conn in lifespan."""
+    ctx = MagicMock()
+    ctx.request_context.lifespan_context = {"conn": MagicMock()}
+    return ctx
+
+
 class TestSyncAndAnalyzeServerWrapper:
     def test_returns_dict_from_output(self):
         from polar_mcp.server import sync_and_analyze as server_fn
 
         mock_output, _, _ = _run()
         with patch("polar_mcp.server._run_sync_and_analyze", return_value=mock_output):
-            result = server_fn()
+            result = server_fn(ctx=_make_ctx())
 
         assert isinstance(result, dict)
         assert "user_id" in result
@@ -307,7 +314,7 @@ class TestSyncAndAnalyzeServerWrapper:
 
         with patch("polar_mcp.server._run_sync_and_analyze",
                    side_effect=RuntimeError("no token")):
-            result = server_fn()
+            result = server_fn(ctx=_make_ctx())
 
         assert result == {"error": "no token"}
 
@@ -315,18 +322,20 @@ class TestSyncAndAnalyzeServerWrapper:
         from polar_mcp.server import sync_and_analyze as server_fn
 
         mock_output, _, _ = _run(analytics_days=30)
+        ctx = _make_ctx()
         with patch("polar_mcp.server._run_sync_and_analyze",
                    return_value=mock_output) as mock_fn:
-            server_fn(analytics_days=30)
+            server_fn(ctx=ctx, analytics_days=30)
 
-        mock_fn.assert_called_once_with(30)
+        mock_fn.assert_called_once_with(30, conn=ctx.request_context.lifespan_context["conn"])
 
     def test_default_analytics_days_is_90(self):
         from polar_mcp.server import sync_and_analyze as server_fn
 
         mock_output, _, _ = _run()
+        ctx = _make_ctx()
         with patch("polar_mcp.server._run_sync_and_analyze",
                    return_value=mock_output) as mock_fn:
-            server_fn()
+            server_fn(ctx=ctx)
 
-        mock_fn.assert_called_once_with(90)
+        mock_fn.assert_called_once_with(90, conn=ctx.request_context.lifespan_context["conn"])

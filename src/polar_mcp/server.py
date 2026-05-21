@@ -43,7 +43,7 @@ async def _lifespan(app: FastMCP) -> AsyncGenerator[dict, None]:  # type: ignore
     global _manager
     if _manager is None:
         db_path = os.environ.get("POLAR_DB_PATH", _DEFAULT_DB_PATH)
-        _manager = DuckDBConnectionManager(db_path, read_only=True)
+        _manager = DuckDBConnectionManager(db_path)
     yield {"conn": _manager.conn}
 
 
@@ -216,13 +216,14 @@ def get_hrv_baseline(
         "Use this as the standard 'refresh' action before querying any metric tools."
     )
 )
-def sync_and_analyze(analytics_days: int = 90) -> dict:
+def sync_and_analyze(ctx: Context, analytics_days: int = 90) -> dict:  # type: ignore[type-arg]
     """
     Args:
         analytics_days: Trailing days to (re)score after sync (default 90, max 365).
     """
     try:
-        return _run_sync_and_analyze(analytics_days).model_dump(mode="json")
+        conn = ctx.request_context.lifespan_context["conn"]
+        return _run_sync_and_analyze(analytics_days, conn=conn).model_dump(mode="json")
     except RuntimeError as exc:
         return {"error": str(exc)}
 

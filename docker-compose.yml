@@ -90,12 +90,18 @@ services:
     restart: unless-stopped
     command: ["python", "-m", "polar_mcp.server"]
 
+    env_file:
+      - .env
+
     environment:
       - MCP_TRANSPORT=streamable-http
       - MCP_HOST=0.0.0.0
       - MCP_PORT=8000
       - MCP_STATELESS_HTTP=true
       - POLAR_DB_PATH=/app/data/polar_dashboard.duckdb
+      - STORAGE_DUCKDB_PATH=/app/data/polar_dashboard.duckdb
+      - STORAGE_TOKEN_PATH=/app/data/tokens/polar.json
+      - STORAGE_DATA_DIR=/app/data
 
     volumes:
       - ./data:/app/data

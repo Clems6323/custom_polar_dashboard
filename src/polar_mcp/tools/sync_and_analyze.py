@@ -46,14 +46,20 @@ class SyncAndAnalyzeOutput(BaseModel):
     completed_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
-def run_sync_and_analyze(analytics_days: int = 90) -> SyncAndAnalyzeOutput:
+def run_sync_and_analyze(
+    analytics_days: int = 90,
+    conn: duckdb.DuckDBPyConnection | None = None,
+) -> SyncAndAnalyzeOutput:
     """Sync Polar AccessLink data then run the readiness analytics pipeline.
 
-    Opens a single read-write DuckDB connection shared by both phases, with
-    exponential-backoff retry (up to 63 s) for file-lock contention.
+    When ``conn`` is provided (e.g. the lifespan singleton from the MCP server)
+    it is used directly and no new DuckDB connection is opened.  When omitted,
+    a read-write connection is opened with exponential-backoff retry (up to 63 s)
+    for file-lock contention.
 
     Args:
         analytics_days: Number of trailing days to score (default 90).
+        conn: Optional existing DuckDB connection to reuse.
 
     Raises:
         RuntimeError: token missing / corrupt, credentials missing, DB locked.
@@ -76,18 +82,19 @@ def run_sync_and_analyze(analytics_days: int = 90) -> SyncAndAnalyzeOutput:
     )
     client = PolarClient(token_store, oauth)
 
-    db_manager: DuckDBConnectionManager | None = None
-    for attempt in range(6):
-        try:
-            db_manager = DuckDBConnectionManager(settings.storage.duckdb_path)
-            break
-        except duckdb.IOException as exc:
-            if attempt == 5:
-                raise RuntimeError(f"Database locked after 6 attempts: {exc}") from exc
-            time.sleep(2 ** attempt)
+    if conn is None:
+        db_manager: DuckDBConnectionManager | None = None
+        for attempt in range(6):
+            try:
+                db_manager = DuckDBConnectionManager(settings.storage.duckdb_path)
+                break
+            except duckdb.IOException as exc:
+                if attempt == 5:
+                    raise RuntimeError(f"Database locked after 6 attempts: {exc}") from exc
+                time.sleep(2 ** attempt)
+        assert db_manager is not None
+        conn = db_manager.conn
 
-    assert db_manager is not None
-    conn = db_manager.conn
     run_migrations(conn)
 
     user_id = str(token.polar_user_id)
