@@ -6,6 +6,8 @@ Callers decide column layout and sizing.
 
 from __future__ import annotations
 
+from datetime import timedelta, timezone
+
 import plotly.graph_objects as go
 
 from domain.models.sleep import SleepSession
@@ -201,10 +203,18 @@ def sleep_schedule(sessions: list[SleepSession]) -> go.Figure:
 
     dates, bedtimes, waketimes = [], [], []
     for s in sessions:
-        dates.append(s.end_time.date())
-        bh = s.start_time.hour + s.start_time.minute / 60
+        if s.utc_offset_minutes is not None:
+            tz = timezone(timedelta(minutes=s.utc_offset_minutes))
+            local_start = s.start_time.astimezone(tz)
+            local_end = s.end_time.astimezone(tz)
+        else:
+            # Naive timestamp stored as UTC: hour value IS the local clock reading
+            local_start = s.start_time
+            local_end = s.end_time
+        dates.append(local_end.date())
+        bh = local_start.hour + local_start.minute / 60
         bedtimes.append(bh + 24 if bh < 12 else bh)
-        wh = s.end_time.hour + s.end_time.minute / 60
+        wh = local_end.hour + local_end.minute / 60
         waketimes.append(wh + 24 if wh < 12 else wh)
 
     all_vals = bedtimes + waketimes
