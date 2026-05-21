@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS sleep_sessions (
     snoring_seconds                 DOUBLE,
     mean_skin_temperature_celsius   DOUBLE,
     temperature_deviation_celsius   DOUBLE,
+    utc_offset_minutes              INTEGER,
     ingested_at                     TIMESTAMPTZ DEFAULT current_timestamp
 )
 """

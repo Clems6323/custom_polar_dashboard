@@ -28,6 +28,7 @@ _SESSION_COLS = (
     "average_hr_bpm", "min_hr_bpm",
     "average_ppi_ms", "rmssd_ms", "sdnn_ms", "breathing_rate_bpm",
     "snoring_seconds", "mean_skin_temperature_celsius", "temperature_deviation_celsius",
+    "utc_offset_minutes",
 )
 
 _SESSION_UPSERT = f"""
@@ -53,7 +54,8 @@ ON CONFLICT (id) DO UPDATE SET
     breathing_rate_bpm            = EXCLUDED.breathing_rate_bpm,
     snoring_seconds               = EXCLUDED.snoring_seconds,
     mean_skin_temperature_celsius = EXCLUDED.mean_skin_temperature_celsius,
-    temperature_deviation_celsius = EXCLUDED.temperature_deviation_celsius
+    temperature_deviation_celsius = EXCLUDED.temperature_deviation_celsius,
+    utc_offset_minutes            = EXCLUDED.utc_offset_minutes
 """
 
 _INTERVAL_INSERT = """
@@ -74,6 +76,7 @@ def _to_session_row(s: SleepSession) -> list:
         s.average_hr_bpm, s.min_hr_bpm, s.average_ppi_ms, s.rmssd_ms,
         s.sdnn_ms, s.breathing_rate_bpm, s.snoring_seconds,
         s.mean_skin_temperature_celsius, s.temperature_deviation_celsius,
+        s.utc_offset_minutes,
     ]
 
 
@@ -133,6 +136,7 @@ def _from_row(row: dict, intervals: list[SleepStageInterval]) -> SleepSession:
         snoring_seconds=row.get("snoring_seconds"),
         mean_skin_temperature_celsius=row.get("mean_skin_temperature_celsius"),
         temperature_deviation_celsius=row.get("temperature_deviation_celsius"),
+        utc_offset_minutes=row.get("utc_offset_minutes"),
         stage_intervals=intervals,
     )
 

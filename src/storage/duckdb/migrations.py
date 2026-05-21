@@ -106,6 +106,13 @@ def _m006_fitness_load_contributor(conn: duckdb.DuckDBPyConnection) -> None:
     )
 
 
+def _m007_sleep_utc_offset(conn: duckdb.DuckDBPyConnection) -> None:
+    """Add utc_offset_minutes column to sleep_sessions for local-time reconstruction."""
+    conn.execute(
+        "ALTER TABLE sleep_sessions ADD COLUMN IF NOT EXISTS utc_offset_minutes INTEGER"
+    )
+
+
 # Ordered registry of (migration_id, callable) pairs.
 # New entries must be appended — never reordered.
 _MIGRATIONS: list[tuple[str, object]] = [
@@ -115,6 +122,7 @@ _MIGRATIONS: list[tuple[str, object]] = [
     ("004_rename_training_load_to_cardio_load", _m004_rename_training_load_to_cardio_load),
     ("005_polar_cardio_load_table", _m005_polar_cardio_load_table),
     ("006_fitness_load_contributor", _m006_fitness_load_contributor),
+    ("007_sleep_utc_offset", _m007_sleep_utc_offset),
 ]
 
 

@@ -126,6 +126,22 @@ def local_to_utc(local_dt_str: str, utc_offset_minutes: int) -> datetime:
     return local_dt.replace(tzinfo=tz).astimezone(UTC)
 
 
+def utc_offset_minutes_from(dt_str: str) -> int | None:
+    """Return the UTC offset in minutes embedded in a Polar datetime string.
+
+    Returns ``None`` for naive strings (no timezone info), which means the
+    offset is unknown and the hour value stored as UTC is the device's local
+    clock reading.
+    """
+    dt = _parse_polar_datetime(dt_str)
+    if dt.tzinfo is None:
+        return None
+    offset = dt.utcoffset()
+    if offset is None:
+        return None
+    return int(offset.total_seconds() / 60)
+
+
 def parse_as_utc(dt_str: str) -> datetime:
     """Parse a Polar datetime string and return a UTC-aware datetime.
 

@@ -9,7 +9,7 @@ from datetime import timedelta
 from domain.models import SleepMetrics, SleepSession
 from domain.models.enums import Provider, SleepStage
 from domain.models.sleep import SleepStageInterval
-from ingestion.normalization.utils import parse_as_utc
+from ingestion.normalization.utils import parse_as_utc, utc_offset_minutes_from
 from ingestion.polar_accesslink.models import PolarSleepData
 
 logger = logging.getLogger(__name__)
@@ -129,6 +129,7 @@ def normalize_sleep(
     """
     start_utc = parse_as_utc(polar.sleep_start_time)
     end_utc = parse_as_utc(polar.sleep_end_time)
+    utc_offset = utc_offset_minutes_from(polar.sleep_start_time)
     session_id = f"sleep_{user_id}_{polar.date}"
     time_in_bed = (end_utc - start_utc).total_seconds()
 
@@ -196,6 +197,7 @@ def normalize_sleep(
         provider=Provider.POLAR,
         start_time=start_utc,
         end_time=end_utc,
+        utc_offset_minutes=utc_offset,
         duration_seconds=time_in_bed,
         continuity_score=continuity_scaled,
         sleep_efficiency_pct=efficiency,

@@ -16,6 +16,9 @@ services:
     env_file:
       - .env
 
+    environment:
+      - TZ=Europe/Paris
+
     volumes:
       # Persist the database, tokens, and parquet files across restarts.
       # Run `docker compose up` from the project root so Docker resolves

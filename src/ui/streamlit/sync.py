@@ -10,7 +10,7 @@ import json
 import logging
 import time
 from collections.abc import Callable
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -222,7 +222,7 @@ def run_full_sync(
     )
 
     info: dict = {
-        "synced_at": datetime.now().isoformat(timespec="seconds"),
+        "synced_at": datetime.now(tz=timezone.utc).isoformat(timespec="seconds"),
         "exercises": sync_result.exercises_synced,
         "sleep_nights": sync_result.sleep_nights_synced,
         "recharge_nights": sync_result.recharge_nights_synced,

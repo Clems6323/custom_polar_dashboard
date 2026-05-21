@@ -107,7 +107,7 @@ with st.sidebar:
     _sync_info = get_last_sync_info()
     if _sync_info and _sync_info.get("synced_at"):
         from datetime import datetime as _dt
-        _synced_at = _dt.fromisoformat(_sync_info["synced_at"])
+        _synced_at = _dt.fromisoformat(_sync_info["synced_at"]).astimezone()
         _today = date.today()
         _label = (
             _synced_at.strftime("Today at %H:%M")

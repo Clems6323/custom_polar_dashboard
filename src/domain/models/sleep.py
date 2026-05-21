@@ -164,6 +164,16 @@ class SleepSession(BaseEntity):
         ),
     )
 
+    # --- Recording timezone ---
+    utc_offset_minutes: int | None = Field(
+        default=None,
+        description=(
+            "UTC offset in minutes at the time of recording "
+            "(e.g. 120 for UTC+2, -240 for UTC-4). "
+            "None means the original timestamp had no timezone info."
+        ),
+    )
+
     # --- Stage timeline ---
     stage_intervals: list[SleepStageInterval] = Field(
         default_factory=list,
