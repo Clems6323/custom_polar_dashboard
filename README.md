@@ -3,7 +3,7 @@
 A production-grade physiological analytics platform for Polar wearable devices.
 Tracks **strain**, **sleep**, and **recovery** with the depth of Whoop or Oura, built on your own data.
 
-> **Status:** All 10 phases complete — architecture, domain models, storage, ingestion, analytics engine, MCP layer, Streamlit UI, visualizations, full test suite (348 tests, 99% coverage), and Docker deployment.
+> **Status:** All 10 phases complete — architecture, domain models, storage, ingestion, analytics engine, MCP layer, Streamlit UI, visualizations, full test suite (375 tests, 99% coverage), and Docker deployment.
 
 ---
 
@@ -27,7 +27,7 @@ scripts/run_sync.py
 DuckDB + Parquet
     │
     ├── Analytics engine        (HRV, ACWR, baselines, sleep/strain/recovery scoring)
-    ├── MCP tools               (FastMCP server, 6 typed AI-agent tools)
+    ├── MCP tools               (FastMCP server, 7 typed AI-agent tools: 6 query + 1 action)
     └── Streamlit dashboard     (Overview / Sleep / Strain / Recovery — dark theme)
 ```
 
@@ -230,7 +230,7 @@ The sync is idempotent. Running it multiple times is safe — all repository wri
 
 ## MCP server
 
-Start the FastMCP server exposing 6 typed AI-agent tools:
+Start the FastMCP server exposing 7 typed AI-agent tools:
 
 ```bash
 make mcp
@@ -238,8 +238,36 @@ make mcp
 uv run python -m polar_mcp.server
 ```
 
-Available tools: `get_sleep_score`, `get_recovery_score`, `get_strain_score`,
-`get_training_load`, `get_sleep_trends`, `get_temperature_deviation`.
+### Query tools (read-only, require synced data)
+
+| Tool | Description |
+|---|---|
+| `get_sleep_score` | Sleep quality score + architecture breakdown (duration, efficiency, deep/REM/light %) for a single night |
+| `get_sleep_trends` | Per-night scores with summary averages over a date range |
+| `get_strain_score` | Daily training strain score and ACWR for a specific date |
+| `get_training_load` | Training load time-series with peak and average summaries over a date range |
+| `get_recovery_score` | Composite readiness score with full contributor breakdown (HRV, resting HR, sleep, strain, temperature) |
+| `get_hrv_baseline` | Rolling HRV baseline statistics (RMSSD mean, std, current vs. baseline %) |
+
+### Action tool (writes to DB, requires Polar credentials)
+
+| Tool | Parameters | Description |
+|---|---|---|
+| `sync_and_analyze` | `analytics_days` (default 90) | Fetch the latest data from Polar AccessLink then immediately score the readiness analytics pipeline. Returns sync counts and scored-day counts in one response. Use this as the standard refresh action before querying any metric tools. |
+
+### Usage from n8n (HTTP Request node)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "sync_and_analyze",
+    "arguments": { "analytics_days": 90 }
+  },
+  "id": 1
+}
+```
 
 All tool outputs use typed Pydantic v2 schemas with explicit units, ISO timestamps, and confidence metadata.
 
@@ -337,7 +365,7 @@ uv run pytest tests/services/
 uv run pytest tests/mcp/
 ```
 
-Current status: **348 tests passing** across domain models, storage repositories, Parquet I/O, normalization, analytics engine, MCP tools, and readiness pipeline. **99% line coverage** on all testable source files.
+Current status: **375 tests passing** across domain models, storage repositories, Parquet I/O, normalization, analytics engine, MCP tools, and readiness pipeline. **99% line coverage** on all testable source files.
 
 ### Linting and type checking
 
@@ -421,9 +449,9 @@ polar-dashboard/
 │   │   ├── scoring/                  # SleepScorer, StrainScorer, RecoveryScorer
 │   │   └── readiness/                # ReadinessPipeline — daily readiness orchestration
 │   │
-│   ├── polar_mcp/                    # FastMCP server, 6 typed AI-agent tools
+│   ├── polar_mcp/                    # FastMCP server, 7 typed AI-agent tools (6 query + 1 action)
 │   │   ├── server.py                 # Entry point: python -m polar_mcp.server
-│   │   ├── tools/                    # get_sleep_score, get_recovery_score, ...
+│   │   ├── tools/                    # get_sleep_score, get_recovery_score, ..., sync_and_analyze
 │   │   └── schemas/                  # Pydantic v2 output schemas
 │   │
 │   └── ui/
@@ -491,7 +519,7 @@ polar-dashboard/
 | 3 | Storage layer (DuckDB + Parquet) | **Complete** |
 | 4 | Polar AccessLink ingestion | **Complete** |
 | 5 | Analytics engine (RMSSD, ACWR, baselines, scoring) | **Complete** |
-| 6 | MCP layer (FastMCP server, 6 typed AI-agent tools) | **Complete** |
+| 6 | MCP layer (FastMCP server, 7 typed AI-agent tools: 6 query + 1 action) | **Complete** |
 | 7 | Streamlit UI (Overview / Sleep / Strain / Recovery pages, dark theme, metric cards) | **Complete** |
 | 8 | Visualizations (sleep schedule, radar chart, correlation scatter, week-over-week) | **Complete** |
 | 9 | Full test suite (348 tests, 99% coverage, `fail_under = 90`) | **Complete** |

@@ -27,6 +27,7 @@ from polar_mcp.tools.hrv import query_hrv_baseline
 from polar_mcp.tools.recovery import query_recovery_score
 from polar_mcp.tools.sleep import query_sleep_score, query_sleep_trends
 from polar_mcp.tools.strain import query_strain_score, query_training_load
+from polar_mcp.tools.sync_and_analyze import run_sync_and_analyze as _run_sync_and_analyze
 from storage.duckdb.connection import DuckDBConnectionManager
 
 _DEFAULT_DB_PATH = "data/polar.duckdb"
@@ -200,6 +201,30 @@ def get_hrv_baseline(
     conn = ctx.request_context.lifespan_context["conn"]
     resolved_end = date.fromisoformat(end_date) if end_date else datetime.now().date()
     return query_hrv_baseline(conn, user_id, resolved_end, window_days)
+
+
+# ---------------------------------------------------------------------------
+# Action tool — sync + analytics in one call
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool(
+    description=(
+        "Fetch the latest data from Polar AccessLink then immediately score the "
+        "readiness analytics pipeline (sleep, strain, recovery) over a trailing "
+        "window. Returns sync counts and analytics scored-day counts in one response. "
+        "Use this as the standard 'refresh' action before querying any metric tools."
+    )
+)
+def sync_and_analyze(analytics_days: int = 90) -> dict:
+    """
+    Args:
+        analytics_days: Trailing days to (re)score after sync (default 90, max 365).
+    """
+    try:
+        return _run_sync_and_analyze(analytics_days).model_dump(mode="json")
+    except RuntimeError as exc:
+        return {"error": str(exc)}
 
 
 if __name__ == "__main__":
